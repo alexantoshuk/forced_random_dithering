@@ -1,51 +1,26 @@
 
 [package]
-name = "madgen"
+name = "forced_random_dithering"
 version = "0.1.0"
 authors = ["Ali <alexander.antoshuk@gmail.com>"]
-keywords = ["instancing", "3d", "generator", "fur", "hair"]
-description = "Library for generating fur/hair for different rendering beckends"
+keywords = ["sampling", "bluenoise", "dithering"]
+description = "Library for generating dithering matrix"
 readme = "README.md"
 exclude = ["images/*", "Cargo.png"]
 edition = "2018"
 
 
-[lib]
-name = "madgen"
-crate-type = ["cdylib"]
-# crate-type = ["rlib"]
-# crate_type = ["staticlib"]
-
-
-
-
 [dependencies]
-# rand = "^0.6"
-itertools = "^0.10"
 rayon = "^1.5"
-lazy_static = "^1.4"
-# rand = "^0.8"
-# rand_xoshiro = "^0.6"
-nanorand = "^0.6"
-# vecmat= "^0.7"
+# lazy_static = "^1.4"
+fastrand = "^1.5"
 unchecked-index ="^0.2"
-acap = "^0.2"
-exr = "^1.1"
-num-traits = "^0.2"
-enum_dispatch = "^0.3"
-hashbrown = "^0.3"
-ultraviolet = { version = "^0.8", features = [ "int" ] }
-arrayvec = "^0.7"
-slice-of-array = "^0.3"
 
-# [[bin]]
-# name = "scatter_demo"
-# path = "src/scatter_demo.rs"
 
-[dev-dependencies]
-criterion = "^0.3"
-obj = "^0.10"
+# [dev-dependencies]
+# criterion = "^0.3"
+# obj = "^0.10"
 
-[[bench]]
-name = "benchmark"
-harness = false
+# [[bench]]
+# name = "benchmark"
+# harness = false
