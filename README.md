@@ -1,2 +1,1 @@
-# madgen
-3D fur &amp; hairs generation library
+Generate dithering matrix
