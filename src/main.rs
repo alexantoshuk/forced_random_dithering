@@ -1,8 +1,6 @@
-use std::cmp::{max, min};
-use std::env;
-
 use fastrand;
 use rayon::prelude::*;
+use std::env;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufWriter;
@@ -10,7 +8,7 @@ use std::time::SystemTime;
 use std::{f64, i32};
 use unchecked_index::unchecked_index;
 
-const MIN_LEN: usize = 16;
+const CHUNK_SIZE: usize = 1024;
 
 fn radius(n: usize) -> f64 {
     (1.0 / n as f64).sqrt() * 0.5
@@ -26,7 +24,7 @@ fn dithering_matrix(size: u32, seed: u64) -> Vec<u32> {
 
     let size = size as usize;
     let num = size * size;
-    let last = num - 1;
+    let last = num as u32 - 1;
     let size_i32 = size as i32;
     let num_u32 = num as u32;
 
@@ -38,7 +36,7 @@ fn dithering_matrix(size: u32, seed: u64) -> Vec<u32> {
     let mut candidates: Vec<usize> = Vec::with_capacity(num);
     let mut free_locations = unsafe { unchecked_index(Vec::with_capacity(num)) };
 
-    for i in 0..num as u32 {
+    for i in 0..num as i32 {
         free_locations.push(i);
     }
 
@@ -52,76 +50,50 @@ fn dithering_matrix(size: u32, seed: u64) -> Vec<u32> {
         (pid - (quotient * size_i32), quotient)
     };
 
-    let mut rng: fastrand::Rng = fastrand::Rng::with_seed(seed as u64);
+    let rng: fastrand::Rng = fastrand::Rng::with_seed(seed as u64);
 
-    println!("Ok.");
+    println!("Done.");
 
-    // first point
-    {
-        let x = 0.25;
-        let y = rng.f32() * 0.5 + 0.25;
-
-        let minloc_x = (x * size as f32) as i32;
-        let minloc_y = (y * size as f32) as i32;
-        let minloc_pid = idx(minloc_x, minloc_y);
-
-        let index = free_locations
-            .iter()
-            .position(|x| *x == minloc_pid as u32)
-            .unwrap();
-        free_locations.remove(index);
-
-        force_field
-            .par_iter_mut()
-            .with_min_len(MIN_LEN)
-            .enumerate()
-            .for_each(|(i, v)| {
-                let (x, y) = pos(i as i32);
-
-                let dx = (minloc_x - x).abs();
-                let dy = (minloc_y - y).abs();
-                let f = force_field_fn[idx(dx, dy)];
-                *v += f;
-            });
-
-        result[minloc_pid as usize] = 0;
-    }
-    // other points
-    for dither_val in 1..num {
+    for dither_val in 0u32..512 {
         rng.shuffle(&mut free_locations);
-        let half_pos = max(free_locations.len() / 2, 1);
+        let half_pos = 1.max(free_locations.len() / 2);
         let half_free_locations = &free_locations[..half_pos];
 
         let min_field_val = half_free_locations
             .par_iter()
-            .with_min_len(MIN_LEN)
+            .with_min_len(CHUNK_SIZE)
             .map(|&pid| force_field[pid as usize])
             .min()
             .unwrap();
 
-        candidates.par_extend(
-            half_free_locations
-                .par_iter()
-                .with_min_len(MIN_LEN * 2)
-                .enumerate()
-                .filter_map(|(i, &pid)| {
-                    if force_field[pid as usize] == min_field_val {
-                        Some(i)
-                    } else {
-                        None
-                    }
-                }),
-        );
+        let minloc_i = half_free_locations
+            .into_iter()
+            .position(|&pid| force_field[pid as usize] == min_field_val)
+            .unwrap();
 
-        let minloc_i = choose(&mut rng, &candidates);
-        candidates.truncate(0);
+        // candidates.par_extend(
+        //     half_free_locations
+        //         .par_iter()
+        //         .with_min_len(CHUNK_SIZE)
+        //         .enumerate()
+        //         .filter_map(|(i, &pid)| {
+        //             if force_field[pid as usize] == min_field_val {
+        //                 Some(i)
+        //             } else {
+        //                 None
+        //             }
+        //         }),
+        // );
+
+        // let minloc_i = choose(&mut rng, &candidates);
+        // candidates.truncate(0);
 
         let minloc_pid = free_locations[minloc_i];
-        let (minloc_x, minloc_y) = pos(minloc_pid as i32);
+        let (minloc_x, minloc_y) = pos(minloc_pid);
 
         force_field
             .par_iter_mut()
-            .with_min_len(MIN_LEN)
+            .with_min_len(CHUNK_SIZE)
             .enumerate()
             .for_each(|(i, v)| {
                 let (x, y) = pos(i as i32);
@@ -132,9 +104,8 @@ fn dithering_matrix(size: u32, seed: u64) -> Vec<u32> {
                 *v += f;
             });
 
-        result[minloc_pid as usize] = dither_val as u32;
-
         free_locations.remove(minloc_i);
+        result[minloc_pid as usize] = dither_val;
 
         print!(
             "\rGenerate matrix: {:>2}% = {} pts",
@@ -158,8 +129,8 @@ fn precalculate_force_field(size: usize) -> Vec<u64> {
     let mut result = Vec::with_capacity(size * size);
     for y in 0..size {
         for x in 0..size {
-            let dx = min(x, size - x);
-            let dy = min(y, size - y);
+            let dx = x.min(size - x);
+            let dy = y.min(size - y);
 
             let r2 = dx * dx + dy * dy;
 
