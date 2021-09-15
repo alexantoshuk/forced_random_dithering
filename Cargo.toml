@@ -17,6 +17,12 @@ fastrand = "^1.5"
 unchecked-index ="^0.2"
 
 
+[[bin]]
+name = "gen_dithering_matrix"
+path = "src/main.rs"
+
+
+
 # [dev-dependencies]
 # criterion = "^0.3"
 # obj = "^0.10"
