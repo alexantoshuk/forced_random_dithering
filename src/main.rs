@@ -56,6 +56,7 @@ fn dithering_matrix(size: u32, seed: u64) -> Vec<u32> {
 
     for dither_val in 0u32..512 {
         rng.shuffle(&mut free_locations);
+        let _ = rng.f32(); // jump random seed
         let half_pos = 1.max(free_locations.len() / 2);
         let half_free_locations = &free_locations[..half_pos];
 
